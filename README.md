@@ -35,7 +35,11 @@ The built-in **PDU Power** dropdown on a device detail page (Status / On / Off /
 
 ![PDU Power dropdown on a device detail page](https://raw.githubusercontent.com/jtdub/nautobot-app-pdu-manager/develop/docs/images/device-power-dropdown.png)
 
-Running an action opens the Job in a modal (device pre-filled) and reports the result — here, a Status read scoped to just the device's outlet:
+Selecting an action opens the Job in a modal with the device pre-filled:
+
+![PDU Power Status job modal](https://raw.githubusercontent.com/jtdub/nautobot-app-pdu-manager/develop/docs/images/power-job-modal.png)
+
+The Job Result reports the outcome — here, a Status read scoped to just the device's outlet:
 
 ![PDU Power Status job result](https://raw.githubusercontent.com/jtdub/nautobot-app-pdu-manager/develop/docs/images/power-job-result.png)
 

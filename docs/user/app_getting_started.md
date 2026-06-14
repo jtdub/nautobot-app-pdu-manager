@@ -29,6 +29,10 @@ enables the PDU Manager jobs:
 invoke generate-test-data
 ```
 
+The PDU Manager jobs are now registered and enabled under **Jobs**:
+
+![PDU Manager jobs](https://raw.githubusercontent.com/jtdub/nautobot-app-pdu-manager/develop/docs/images/pdu-manager-jobs.png)
+
 **Step 3 — Open a device and use the PDU Power dropdown.** Browse to any of the generated
 devices (for example `dce-acc-01`) and open the **PDU Power** dropdown in the page header.
 
