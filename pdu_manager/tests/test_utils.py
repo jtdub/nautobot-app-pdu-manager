@@ -1,6 +1,7 @@
 """Tests for pdu_manager.utils device/outlet resolution."""
 
 from django.test import TestCase
+from nautobot.dcim.models import PowerOutlet
 
 from pdu_manager.tests import fixtures
 from pdu_manager.utils import (
@@ -24,6 +25,16 @@ class UtilsTestCase(TestCase):
 
     def test_outlet_index(self):
         self.assertEqual(outlet_index(self.env["outlet"]), 5)
+
+    def test_outlet_index_parses_trailing_integer(self):
+        outlet = PowerOutlet.objects.create(device=self.env["pdu"], name="Power Outlet 17")
+        self.assertEqual(outlet_index(outlet), 17)
+
+    def test_outlet_index_none_without_trailing_integer(self):
+        outlet = PowerOutlet.objects.create(device=self.env["pdu"], name="Mgmt Port")
+        self.assertIsNone(outlet_index(outlet))
+        with self.assertRaises(ValueError):
+            resolve_pdu_and_outlets(self.env["pdu"], outlet)
 
     def test_connected_outlet_for_downstream_device(self):
         self.assertEqual(connected_outlet_for_device(self.env["server"]), self.env["outlet"])

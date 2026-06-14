@@ -4,7 +4,6 @@ from django.contrib import messages
 from django.contrib.auth.mixins import PermissionRequiredMixin
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.generic import View
-from nautobot.apps.ui import ObjectDetailContent, ObjectFieldsPanel, SectionChoices
 from nautobot.apps.views import NautobotUIViewSet
 from nautobot.dcim.models import Device, PowerOutlet
 from nautobot.extras.models import Job as JobModel
@@ -13,67 +12,57 @@ from nautobot.extras.models import JobResult
 from pdu_manager import filters, forms, models, tables
 from pdu_manager.api import serializers
 from pdu_manager.constants import ACTION_CHOICES
-from pdu_manager.utils import connected_outlet_for_device, is_pdu, outlet_index
+from pdu_manager.utils import (
+    blocked_protected_devices,
+    connected_outlet_for_device,
+    is_pdu,
+    is_power_off_protected,
+    outlet_index,
+)
 
 
-class PduManagerUIViewSet(NautobotUIViewSet):
-    """ViewSet for PduManager views."""
+class PowerOffProtectionUIViewSet(NautobotUIViewSet):
+    """Full UI CRUD (list/detail/add/edit/delete/bulk) for PowerOffProtection rules."""
 
-    bulk_update_form_class = forms.PduManagerBulkEditForm
-    filterset_class = filters.PduManagerFilterSet
-    filterset_form_class = forms.PduManagerFilterForm
-    form_class = forms.PduManagerForm
-    lookup_field = "pk"
-    queryset = models.PduManager.objects.all()
-    serializer_class = serializers.PduManagerSerializer
-    table_class = tables.PduManagerTable
+    queryset = models.PowerOffProtection.objects.all()
+    table_class = tables.PowerOffProtectionTable
+    form_class = forms.PowerOffProtectionForm
+    filterset_class = filters.PowerOffProtectionFilterSet
+    filterset_form_class = forms.PowerOffProtectionFilterForm
+    bulk_update_form_class = forms.PowerOffProtectionBulkEditForm
+    serializer_class = serializers.PowerOffProtectionSerializer
 
-    # Here is an example of using the UI  Component Framework for the detail view.
-    # More information can be found in the Nautobot documentation:
-    # https://docs.nautobot.com/projects/core/en/stable/development/core/ui-component-framework/
-    object_detail_content = ObjectDetailContent(
-        panels=[
-            ObjectFieldsPanel(
-                weight=100,
-                section=SectionChoices.LEFT_HALF,
-                fields="__all__",
-                # Alternatively, you can specify a list of field names:
-                # fields=[
-                #     "name",
-                #     "description",
-                # ],
-                # Some fields may require additional configuration, we can use value_transforms
-                # value_transforms={
-                #     "name": [helpers.bettertitle]
-                # },
-            ),
-            # If there is a ForeignKey or M2M with this model we can use ObjectsTablePanel
-            # to display them in a table format.
-            # ObjectsTablePanel(
-            # weight=200,
-            # section=SectionChoices.RIGHT_HALF,
-            # table_class=tables.PduManagerTable,
-            # You will want to filter the table using the related_name
-            # filter="pdumanagers",
-            # ),
-        ],
-    )
+
+class PduCommandSetUIViewSet(NautobotUIViewSet):
+    """Full UI CRUD (list/detail/add/edit/delete/bulk) for PDU Command Sets."""
+
+    queryset = models.PduCommandSet.objects.all()
+    table_class = tables.PduCommandSetTable
+    form_class = forms.PduCommandSetForm
+    filterset_class = filters.PduCommandSetFilterSet
+    filterset_form_class = forms.PduCommandSetFilterForm
+    bulk_update_form_class = forms.PduCommandSetBulkEditForm
+    serializer_class = serializers.PduCommandSetSerializer
 
 
 def _outlet_rows(device):
-    """Build the list of outlet rows shown on the control page for ``device``."""
+    """Build the list of outlet rows shown on the control page for ``device``.
+
+    Each row carries a ``protected`` flag: True when the action would remove power from a
+    device covered by a PowerOffProtection rule (the invoked device, or a device fed by
+    the outlet when controlling a PDU). The template uses it to disable Off/Reboot.
+    """
     if is_pdu(device):
         outlets = device.power_outlets.all()
     else:
         connected = connected_outlet_for_device(device)
         outlets = [connected] if connected is not None else []
-    return [
-        {
-            "outlet": outlet,
-            "index": outlet_index(outlet),
-        }
-        for outlet in outlets
-    ]
+    rows = []
+    for outlet in outlets:
+        # ACTION_OFF is a protected action, so this reflects the Off/Reboot block.
+        protected = bool(blocked_protected_devices(device, "off", [outlet]))
+        rows.append({"outlet": outlet, "index": outlet_index(outlet), "protected": protected})
+    return rows
 
 
 class DevicePowerControlView(PermissionRequiredMixin, View):
@@ -89,6 +78,7 @@ class DevicePowerControlView(PermissionRequiredMixin, View):
             "is_pdu": is_pdu(device),
             "outlet_rows": _outlet_rows(device),
             "actions": ACTION_CHOICES,
+            "device_protected": is_power_off_protected(device),
         }
         return render(request, "pdu_manager/device_power_control.html", context)
 
@@ -112,6 +102,15 @@ class DevicePowerActionView(PermissionRequiredMixin, View):
         power_outlet = None
         if outlet_pk:
             power_outlet = get_object_or_404(PowerOutlet.objects.restrict(request.user, "view"), pk=outlet_pk)
+
+        protected = blocked_protected_devices(device, action, [power_outlet] if power_outlet else [])
+        if protected:
+            names = ", ".join(sorted(dev.name for dev in protected))
+            messages.error(
+                request,
+                f"Refusing to '{action}': blocked by a Power Off Protection rule matching {names}.",
+            )
+            return redirect("plugins:pdu_manager:device_power_control", pk=pk)
 
         job_model = JobModel.objects.get(
             module_name="pdu_manager.jobs",

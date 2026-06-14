@@ -6,12 +6,17 @@ from pdu_manager import filters, models
 from pdu_manager.api import serializers
 
 
-class PduManagerViewSet(NautobotModelViewSet):  # pylint: disable=too-many-ancestors
-    """PduManager viewset."""
+class PowerOffProtectionViewSet(NautobotModelViewSet):  # pylint: disable=too-many-ancestors
+    """Full REST CRUD for PowerOffProtection rules."""
 
-    queryset = models.PduManager.objects.all()
-    serializer_class = serializers.PduManagerSerializer
-    filterset_class = filters.PduManagerFilterSet
+    queryset = models.PowerOffProtection.objects.all()
+    serializer_class = serializers.PowerOffProtectionSerializer
+    filterset_class = filters.PowerOffProtectionFilterSet
 
-    # Option for modifying the default HTTP methods:
-    # http_method_names = ["get", "post", "put", "patch", "delete", "head", "options", "trace"]
+
+class PduCommandSetViewSet(NautobotModelViewSet):  # pylint: disable=too-many-ancestors
+    """Full REST CRUD for PDU Command Sets."""
+
+    queryset = models.PduCommandSet.objects.all()
+    serializer_class = serializers.PduCommandSetSerializer
+    filterset_class = filters.PduCommandSetFilterSet

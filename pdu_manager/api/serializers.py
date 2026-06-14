@@ -5,14 +5,21 @@ from nautobot.apps.api import NautobotModelSerializer, TaggedModelSerializerMixi
 from pdu_manager import models
 
 
-class PduManagerSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):  # pylint: disable=too-many-ancestors
-    """PduManager Serializer."""
+class PowerOffProtectionSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):  # pylint: disable=too-many-ancestors
+    """Serializer for the PowerOffProtection model."""
 
     class Meta:
         """Meta attributes."""
 
-        model = models.PduManager
+        model = models.PowerOffProtection
         fields = "__all__"
 
-        # Option for disabling write for certain fields:
-        # read_only_fields = []
+
+class PduCommandSetSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):  # pylint: disable=too-many-ancestors
+    """Serializer for the PduCommandSet model."""
+
+    class Meta:
+        """Meta attributes."""
+
+        model = models.PduCommandSet
+        fields = "__all__"

@@ -8,12 +8,10 @@ from nautobot.apps.urls import NautobotUIViewSetRouter
 from pdu_manager import views
 
 app_name = "pdu_manager"
+
 router = NautobotUIViewSetRouter()
-
-# The standard is for the route to be the hyphenated version of the model class name plural.
-# for example, ExampleModel would be example-models.
-router.register("pdu-managers", views.PduManagerUIViewSet)
-
+router.register("power-off-protections", views.PowerOffProtectionUIViewSet)
+router.register("pdu-command-sets", views.PduCommandSetUIViewSet)
 
 urlpatterns = [
     path("docs/", RedirectView.as_view(url=static("pdu_manager/docs/index.html")), name="docs"),

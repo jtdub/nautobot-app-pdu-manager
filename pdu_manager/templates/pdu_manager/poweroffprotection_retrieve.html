@@ -1,0 +1,64 @@
+{% extends "generic/object_retrieve.html" %}
+{% load helpers %}
+
+{% block content_left_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Power Off Protection</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Name</td>
+                <td>{{ object.name }}</td>
+            </tr>
+            <tr>
+                <td>Enabled</td>
+                <td>
+                    {% if object.enabled %}
+                        <span class="glyphicon glyphicon-ok text-success" aria-hidden="true"></span>
+                    {% else %}
+                        <span class="glyphicon glyphicon-remove text-danger" aria-hidden="true"></span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td>Description</td>
+                <td>{{ object.description|placeholder }}</td>
+            </tr>
+        </table>
+    </div>
+{% endblock content_left_page %}
+
+{% block content_right_page %}
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <strong>Matching Criteria</strong>
+        </div>
+        <table class="table table-hover panel-body attr-table">
+            <tr>
+                <td>Roles</td>
+                <td>
+                    {% for role in object.roles.all %}{{ role|hyperlinked_object }}{% if not forloop.last %}, {% endif %}{% empty %}{{ ""|placeholder }}{% endfor %}
+                </td>
+            </tr>
+            <tr>
+                <td>Tenants</td>
+                <td>
+                    {% for tenant in object.tenants.all %}{{ tenant|hyperlinked_object }}{% if not forloop.last %}, {% endif %}{% empty %}{{ ""|placeholder }}{% endfor %}
+                </td>
+            </tr>
+            <tr>
+                <td>Device Tags</td>
+                <td>
+                    {% for tag in object.device_tags.all %}{{ tag|hyperlinked_object }}{% if not forloop.last %}, {% endif %}{% empty %}{{ ""|placeholder }}{% endfor %}
+                </td>
+            </tr>
+            <tr>
+                <td>Devices</td>
+                <td>
+                    {% for device in object.devices.all %}{{ device|hyperlinked_object }}{% if not forloop.last %}, {% endif %}{% empty %}{{ ""|placeholder }}{% endfor %}
+                </td>
+            </tr>
+        </table>
+    </div>
+{% endblock content_right_page %}

@@ -28,10 +28,11 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-# Nautobot 3.0.x requires Python <3.14, so cap here to keep dependency resolution solvable.
+# Nautobot 3.1.x requires Python <3.14, so cap here to keep dependency resolution solvable.
 python = ">=3.10,<3.14"
-# Used for local development
-nautobot = ">=3.0.0,<4.0.0"
+# Minimum 3.1: the device-page PDU Power dropdown uses the 3.1 UI job-modal button API
+# (`nautobot.core.ui.object_detail._JobModalButton`), which does not exist in 3.0.
+nautobot = ">=3.1.0,<4.0.0"
 # Nornir/Netmiko stack for SSH control of APC PDUs.
 # nautobot-app-nornir provides the Nautobot ORM inventory + Secrets-based credentials
 # and pulls in nornir-nautobot. nornir-netmiko provides the netmiko send-command tasks.

@@ -478,6 +478,23 @@ def createsuperuser(context, user="admin"):
 
 @task(
     help={
+        "flush": "Delete existing Power Off Protection rules before generating new data.",
+        "database": "The database to generate the test data in (defaults to the default database).",
+    }
+)
+def generate_test_data(context, flush=False, database=""):
+    """Generate PDU Manager demo data (PDUs, outlets, cabled devices, protection rules)."""
+    command = "nautobot-server generate_pdu_manager_test_data"
+    if database:
+        command += f" --database {database}"
+    if flush:
+        command += " --flush"
+
+    run_command(context, command)
+
+
+@task(
+    help={
         "name": "name of the migration to be created; if unspecified, will autogenerate a name",
     }
 )

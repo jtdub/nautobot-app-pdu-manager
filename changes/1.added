@@ -1,1 +1,0 @@
-Added APC PDU outlet control: a `PowerControlJob` (on/off/reboot/status) over SSH via Nornir/Netmiko, a `pdu_outlet_id` custom field on power outlets, and a "PDU Power" control button on device pages.

@@ -1,9 +1,5 @@
 """Constants for the pdu_manager app."""
 
-# CustomField key on dcim.PowerOutlet that stores the numeric outlet index the APC CLI
-# uses (e.g. the "5" in `olOn 5`). Keep in sync with signals.create_pdu_outlet_custom_field.
-PDU_OUTLET_ID_FIELD = "pdu_outlet_id"
-
 # The netmiko/Nautobot Platform network_driver expected on APC PDU devices.
 APC_NETWORK_DRIVER = "apc_aos"
 
@@ -20,12 +16,22 @@ ACTION_CHOICES = (
     (ACTION_STATUS, "Status"),
 )
 
-# Map an action to its APC CLI command verb. `status` is handled separately (olStatus all).
-ACTION_COMMANDS = {
-    ACTION_ON: "olOn",
-    ACTION_OFF: "olOff",
-    ACTION_REBOOT: "olReboot",
-}
+# Actions that remove power from a device (Reboot power-cycles, so it briefly powers off).
+# These are refused when a device matches an enabled PowerOffProtection rule.
+PROTECTED_ACTIONS = (ACTION_OFF, ACTION_REBOOT)
 
-# APC NMC returns this code on a successful outlet command.
-APC_SUCCESS_CODE = "E000"
+# Default PduCommandSet field values for APC Network Management Card (AOS) PDUs. Seeded by
+# the 0003_seed_apc_command_set data migration and assigned to the APC platform by the
+# generate_pdu_manager_test_data command. Editable per-platform via the PduCommandSet UI/API.
+APC_DEFAULT_COMMAND_SET = {
+    "name": "APC AOS",
+    "description": "APC Network Management Card (AOS) outlet-control CLI commands.",
+    "on_command": "olOn",
+    "off_command": "olOff",
+    "reboot_command": "olReboot",
+    "status_command": "olStatus",
+    "status_all_argument": "all",
+    "outlet_separator": ",",
+    "success_string": "E000",
+    "status_parse_regex": r"^\s*(?P<id>\d+):\s*(?P<name>.*?):\s*(?P<state>On|Off)\s*$",
+}

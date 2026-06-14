@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load helpers %}
 
-{% block title %}PDU Power Control - {{ device }}{% endblock %}
+{% block title %}PDU Power Control - {{ device }}{% endblock title %}
 
 {% block content %}
 <div class="row">
@@ -11,6 +11,13 @@
                 <strong>PDU Power Control</strong> &mdash; {{ device|hyperlinked_object }}
             </div>
             <div class="panel-body">
+                {% if device_protected %}
+                    <div class="alert alert-warning" role="alert">
+                        <span class="glyphicon glyphicon-ban-circle" aria-hidden="true"></span>
+                        This device is covered by a <strong>Power Off Protection</strong> rule.
+                        Off and Reboot are disabled.
+                    </div>
+                {% endif %}
                 {% if outlet_rows %}
                     {% if is_pdu %}
                         <p class="text-muted">This device is a PDU. Control each of its outlets below.</p>
@@ -41,13 +48,13 @@
                                             {% csrf_token %}
                                             <input type="hidden" name="power_outlet" value="{{ row.outlet.pk }}">
                                             <button type="submit" name="action" value="on" class="btn btn-success btn-xs"{% if row.index is None %} disabled{% endif %}>
-                                                <i class="mdi mdi-power-plug"></i> On
+                                                <span class="glyphicon glyphicon-off" aria-hidden="true"></span> On
                                             </button>
-                                            <button type="submit" name="action" value="off" class="btn btn-danger btn-xs"{% if row.index is None %} disabled{% endif %}>
-                                                <i class="mdi mdi-power-plug-off"></i> Off
+                                            <button type="submit" name="action" value="off" class="btn btn-danger btn-xs"{% if row.index is None or row.protected %} disabled{% endif %}{% if row.protected %} title="Blocked by a Power Off Protection rule"{% endif %}>
+                                                <span class="glyphicon glyphicon-off" aria-hidden="true"></span> Off
                                             </button>
-                                            <button type="submit" name="action" value="reboot" class="btn btn-warning btn-xs"{% if row.index is None %} disabled{% endif %}>
-                                                <i class="mdi mdi-restart"></i> Reboot
+                                            <button type="submit" name="action" value="reboot" class="btn btn-warning btn-xs"{% if row.index is None or row.protected %} disabled{% endif %}{% if row.protected %} title="Blocked by a Power Off Protection rule"{% endif %}>
+                                                <span class="glyphicon glyphicon-refresh" aria-hidden="true"></span> Reboot
                                             </button>
                                         </form>
                                     </td>
@@ -59,7 +66,7 @@
                     <form action="{% url 'plugins:pdu_manager:device_power_action' pk=device.pk %}" method="post" style="display:inline;">
                         {% csrf_token %}
                         <button type="submit" name="action" value="status" class="btn btn-primary">
-                            <i class="mdi mdi-refresh"></i> Refresh Outlet Status
+                            <span class="glyphicon glyphicon-search" aria-hidden="true"></span> Refresh Outlet Status
                         </button>
                     </form>
                     <span class="text-muted">Status runs as a Job; results appear in the JobResult log.</span>
@@ -73,4 +80,4 @@
         </div>
     </div>
 </div>
-{% endblock %}
+{% endblock content %}

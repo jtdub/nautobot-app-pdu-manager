@@ -1,12 +1,14 @@
-"""Nornir play that controls APC PDU outlets over SSH.
+"""Nornir play that controls managed PDU outlets over SSH.
 
 This mirrors the structure of nautobot-app-golden-config's ``nornir_plays`` (Nautobot ORM
 inventory, Secrets-based credentials, a JobResult-aware logger and a processor), but for
-the fixed set of APC outlet verbs we call ``netmiko_send_command`` directly with the
-``apc_aos`` driver instead of routing through the full nornir-nautobot dispatcher.
-"""
+the fixed set of outlet verbs we call ``netmiko_send_command`` directly with the device's
+platform ``network_driver`` instead of routing through the full nornir-nautobot dispatcher.
 
-import re
+The actual commands, success marker, and status-parsing regex are **not** hard-coded: they
+come from the :class:`~pdu_manager.models.PduCommandSet` assigned to the PDU's Platform,
+resolved at run time by ``utils.command_set_for``.
+"""
 
 from nautobot_plugin_nornir.constants import NORNIR_SETTINGS
 from nautobot_plugin_nornir.plugins.inventory.nautobot_orm import NautobotORMInventory
@@ -15,63 +17,20 @@ from nornir.core.plugins.inventory import InventoryPluginRegister
 from nornir.core.task import Result, Task
 from nornir_netmiko.tasks import netmiko_send_command
 
-from pdu_manager.constants import (
-    ACTION_COMMANDS,
-    APC_SUCCESS_CODE,
-)
+from pdu_manager.config import mock_connections_enabled
+from pdu_manager.nornir_plays.mock import simulate_command
 from pdu_manager.nornir_plays.processor import ProcessPdu
+from pdu_manager.utils import command_set_for
 
 InventoryPluginRegister.register("nautobot-inventory", NautobotORMInventory)
 
-# Matches an `olStatus` outlet line, e.g. "    5: Core Switch: On".
-_OL_STATUS_RE = re.compile(r"^\s*(?P<id>\d+):\s*(?P<name>.*?):\s*(?P<state>On|Off)\s*$", re.IGNORECASE)
-
 
 class PduCommandError(Exception):
-    """Raised when an APC PDU command does not report success."""
-
-
-def command_for(action, outlet_ids):
-    """Build the APC CLI command string for ``action`` against ``outlet_ids``.
-
-    Args:
-        action: One of the on/off/reboot action keys (see ``constants.ACTION_COMMANDS``).
-        outlet_ids: Iterable of integer outlet indexes.
-
-    Returns:
-        The command string, e.g. ``"olOn 5,6"``.
-    """
-    verb = ACTION_COMMANDS.get(action)
-    if verb is None:
-        raise ValueError(f"Unsupported PDU action: {action!r}")
-    ids = ",".join(str(int(outlet_id)) for outlet_id in outlet_ids)
-    if not ids:
-        raise ValueError("At least one outlet id is required.")
-    return f"{verb} {ids}"
-
-
-def check_success(output):
-    """Return ``output`` if it reports APC success, else raise ``PduCommandError``."""
-    if APC_SUCCESS_CODE not in (output or ""):
-        raise PduCommandError(f"APC command did not report {APC_SUCCESS_CODE} success:\n{output}")
-    return output
-
-
-def parse_ol_status(output):
-    """Parse ``olStatus all`` output into ``{outlet_id: {"name": str, "state": str}}``."""
-    statuses = {}
-    for line in (output or "").splitlines():
-        match = _OL_STATUS_RE.match(line)
-        if match:
-            statuses[int(match.group("id"))] = {
-                "name": match.group("name").strip(),
-                "state": match.group("state").capitalize(),
-            }
-    return statuses
+    """Raised when a PDU command does not report success."""
 
 
 def _outlet_task(task: Task, command: str) -> Result:
-    """Send a single APC CLI ``command`` to the host via netmiko."""
+    """Send a single CLI ``command`` to the host via netmiko."""
     result = task.run(
         task=netmiko_send_command,
         name=command,
@@ -81,8 +40,15 @@ def _outlet_task(task: Task, command: str) -> Result:
     return Result(host=task.host, result=result[0].result)
 
 
-def _run(pdu, command, logger):
+def _run(pdu, command, logger, command_set):
     """Initialize Nornir for a single PDU device and run ``command``, returning raw output."""
+    if mock_connections_enabled():
+        logger.info(
+            f"[MOCK_CONNECTIONS] Simulating `{command}` on {pdu.name}; no SSH session opened.",
+            extra={"object": pdu},
+        )
+        return simulate_command(pdu, command, command_set)
+
     # Import here to avoid importing the Django ORM at module load time.
     from nautobot.dcim.models import Device  # pylint: disable=import-outside-toplevel
 
@@ -114,29 +80,38 @@ def _run(pdu, command, logger):
 def run_power_action(job, pdu, action, outlet_ids):
     """Execute an on/off/reboot ``action`` against ``outlet_ids`` on ``pdu``.
 
-    Args:
-        job: The running Nautobot Job (provides ``job_result`` and ``logger``).
-        pdu: The APC PDU ``dcim.Device``.
-        action: One of the on/off/reboot action keys.
-        outlet_ids: Iterable of integer outlet indexes.
+    The command and success check come from the PDU Platform's ``PduCommandSet``.
 
     Returns:
-        The raw command output (already verified to contain the success code).
+        The raw command output (already verified against the command set's success string).
     """
     logger = _logger_for(job)
-    command = command_for(action, outlet_ids)
+    command_set = command_set_for(pdu)
+    command = command_set.build_command(action, outlet_ids)
     logger.info(f"Sending `{command}` to {pdu.name}.", extra={"object": pdu})
-    output = check_success(_run(pdu, command, logger))
+    output = _run(pdu, command, logger, command_set)
+    if not command_set.check_success(output):
+        raise PduCommandError(
+            f"`{command}` on {pdu.name} did not report success ('{command_set.success_string}'):\n{output}"
+        )
     logger.info(f"`{command}` succeeded on {pdu.name}.", extra={"object": pdu})
     return output
 
 
-def run_status(job, pdu):
-    """Query ``olStatus all`` on ``pdu`` and return ``{outlet_id: {...}}``."""
+def run_status(job, pdu, outlet_ids=None):
+    """Query outlet status on ``pdu`` and return ``{outlet_id: {...}}``.
+
+    With ``outlet_ids`` the query is scoped to those outlets; otherwise the whole unit is
+    queried. Scoping keeps a single-device Status from reporting every outlet on the PDU.
+    The status command and parsing regex come from the PDU Platform's ``PduCommandSet``.
+    """
     logger = _logger_for(job)
-    logger.info(f"Querying outlet status on {pdu.name}.", extra={"object": pdu})
-    output = _run(pdu, "olStatus all", logger)
-    statuses = parse_ol_status(output)
+    command_set = command_set_for(pdu)
+    command = command_set.build_status_command(outlet_ids)
+    scope = "all outlets" if not outlet_ids else f"outlet(s) {','.join(str(outlet_id) for outlet_id in outlet_ids)}"
+    logger.info(f"Querying {scope} status on {pdu.name}.", extra={"object": pdu})
+    output = _run(pdu, command, logger, command_set)
+    statuses = command_set.parse_status(output)
     for outlet_id, info in sorted(statuses.items()):
         logger.info(f"Outlet {outlet_id} ({info['name']}): {info['state']}", extra={"object": pdu})
     return statuses

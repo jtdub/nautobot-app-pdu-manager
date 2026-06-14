@@ -12,44 +12,35 @@ from nautobot.dcim.models import (
     PowerOutlet,
     PowerPort,
 )
-from nautobot.extras.choices import CustomFieldTypeChoices
-from nautobot.extras.models import CustomField, Role, Status
+from nautobot.extras.models import Role, Status
 
-from pdu_manager.constants import APC_NETWORK_DRIVER, PDU_OUTLET_ID_FIELD
-from pdu_manager.models import PduManager
-
-
-def create_pdumanager():
-    """Fixture to create necessary number of PduManager for tests."""
-    PduManager.objects.create(name="Test One")
-    PduManager.objects.create(name="Test Two")
-    PduManager.objects.create(name="Test Three")
+from pdu_manager.constants import APC_DEFAULT_COMMAND_SET, APC_NETWORK_DRIVER
+from pdu_manager.models import PduCommandSet, PowerOffProtection
 
 
-def ensure_pdu_outlet_custom_field():
-    """Ensure the pdu_outlet_id CustomField exists and applies to PowerOutlet.
-
-    The app normally creates this via the ``nautobot_database_ready`` signal; tests call
-    this so they do not depend on signal timing.
-    """
-    field, _ = CustomField.objects.get_or_create(
-        key=PDU_OUTLET_ID_FIELD,
-        defaults={"type": CustomFieldTypeChoices.TYPE_INTEGER, "label": "PDU Outlet ID"},
+def create_apc_command_set(platform=None):
+    """Create the default APC PduCommandSet, optionally assigned to ``platform``."""
+    command_set, _ = PduCommandSet.objects.get_or_create(
+        name=APC_DEFAULT_COMMAND_SET["name"],
+        defaults={key: value for key, value in APC_DEFAULT_COMMAND_SET.items() if key != "name"},
     )
-    field.content_types.add(ContentType.objects.get_for_model(PowerOutlet))
-    return field
+    if platform is not None:
+        command_set.platforms.add(platform)
+    return command_set
 
 
 def create_pdu_environment():  # pylint: disable=too-many-locals
-    """Create an APC PDU, an outlet (index 5), and a server cabled to that outlet.
+    """Create an APC PDU, an outlet named "Outlet 5" (-> APC outlet 5), and a server cabled to it.
+
+    Also creates the APC command set and assigns it to the PDU's platform.
 
     Returns:
-        dict with keys ``pdu``, ``server``, ``outlet``, ``power_port``, ``platform``.
+        dict with keys ``pdu``, ``server``, ``outlet``, ``power_port``, ``platform``,
+        ``role``, ``command_set``.
     """
-    ensure_pdu_outlet_custom_field()
-
     manufacturer = Manufacturer.objects.create(name="APC")
     platform = Platform.objects.create(name="APC AOS", network_driver=APC_NETWORK_DRIVER)
+    command_set = create_apc_command_set(platform)
     pdu_type = DeviceType.objects.create(manufacturer=manufacturer, model="AP8xxx")
     server_type = DeviceType.objects.create(manufacturer=manufacturer, model="Server")
 
@@ -80,9 +71,8 @@ def create_pdu_environment():  # pylint: disable=too-many-locals
         status=device_status,
     )
 
+    # Name ends in "5" so outlet_index() maps it to APC outlet number 5.
     outlet = PowerOutlet.objects.create(device=pdu, name="Outlet 5")
-    outlet.cf[PDU_OUTLET_ID_FIELD] = 5
-    outlet.validated_save()
 
     power_port = PowerPort.objects.create(device=server, name="PSU1")
 
@@ -96,4 +86,22 @@ def create_pdu_environment():  # pylint: disable=too-many-locals
         "outlet": outlet,
         "power_port": power_port,
         "platform": platform,
+        "role": role,
+        "command_set": command_set,
     }
+
+
+def create_power_off_protection(  # pylint: disable=too-many-arguments
+    name="Protect", *, enabled=True, roles=None, tenants=None, device_tags=None, devices=None
+):
+    """Create a PowerOffProtection rule with the given matching criteria."""
+    rule = PowerOffProtection.objects.create(name=name, enabled=enabled)
+    if roles:
+        rule.roles.set(roles)
+    if tenants:
+        rule.tenants.set(tenants)
+    if device_tags:
+        rule.device_tags.set(device_tags)
+    if devices:
+        rule.devices.set(devices)
+    return rule

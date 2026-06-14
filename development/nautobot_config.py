@@ -138,4 +138,10 @@ PLUGINS_CONFIG = {
             },
         },
     },
+    "pdu_manager": {
+        # Set PDU_MANAGER_MOCK_CONNECTIONS=True to simulate APC SSH sessions when the
+        # power-control jobs run (for demos without real PDU hardware). Pair this with
+        # `invoke generate-test-data` to drive the whole UI end-to-end.
+        "MOCK_CONNECTIONS": is_truthy(os.getenv("PDU_MANAGER_MOCK_CONNECTIONS", "False")),
+    },
 }

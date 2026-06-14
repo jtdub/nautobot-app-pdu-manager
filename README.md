@@ -23,25 +23,27 @@ To avoid extra work and temporary links, make sure that publishing docs (or merg
 
 ## Overview
 
-> Developer Note: Add a long (2-3 paragraphs) description of what the App does, what problems it solves, what functionality it adds to Nautobot, what external systems it works with etc.
+PDU Manager is a [Nautobot](https://nautobot.com/) app that controls **APC managed PDU outlets directly from Nautobot** — power an outlet on or off, reboot it, or read its status — over SSH (Nornir + Netmiko, the `apc_aos` driver). It works from either the PDU device itself or from any device that is powered by a PDU outlet, building entirely on Nautobot's native power modeling (a PDU's outlets are `PowerOutlet` components, a powered device exposes a `PowerPort`, and the two are joined by a power `Cable`). The APC outlet number is derived from the outlet's name, so there is no extra per-outlet configuration to maintain.
+
+Every action runs as a Nautobot Job, surfaced as a built-in **PDU Power** dropdown (Status / On / Off / Reboot) on every device detail page — no Job Button configuration required. Each item opens the Job in a modal with the device pre-filled; the result, including outlet status, is written to the Job Result log. A Status read is scoped to just the outlet(s) feeding the selected device rather than the whole PDU.
+
+To prevent accidental outages, PDU Manager adds a **Power Off Protection** model (with full UI and REST API) that refuses Off and Reboot for devices matched by role, tenant, tag, or explicit device. For demos and evaluation without real hardware, a `MOCK_CONNECTIONS` setting simulates the APC CLI, and an `invoke generate-test-data` command builds a complete sample environment (PDUs, cabled devices, and protection rules) and enables the jobs.
 
 ### Screenshots
 
-> Developer Note: Add any representative screenshots of the App in action. These images should also be added to the `docs/user/app_use_cases.md` section.
+The built-in **PDU Power** dropdown on a device detail page (Status / On / Off / Reboot, with a power icon):
 
-> Developer Note: Place the files in the `docs/images/` folder and link them using only full URLs from GitHub, for example: `![Overview](https://raw.githubusercontent.com/jtdub/nautobot-app-pdu-manager/develop/docs/images/app-overview.png)`. This absolute static linking is required to ensure the README renders properly in GitHub, the docs site, and any other external sites like PyPI.
+![PDU Power dropdown on a device detail page](https://raw.githubusercontent.com/jtdub/nautobot-app-pdu-manager/develop/docs/images/device-power-dropdown.png)
 
-More screenshots can be found in the [Using the App](https://docs.nautobot.com/projects/pdu-manager/en/latest/user/app_use_cases/) page in the documentation. Here's a quick overview of some of the app's added functionality:
+Running an action opens the Job in a modal (device pre-filled) and reports the result — here, a Status read scoped to just the device's outlet:
 
-![](https://raw.githubusercontent.com/jtdub/nautobot-app-pdu-manager/develop/docs/images/placeholder.png)
+![PDU Power Status job result](https://raw.githubusercontent.com/jtdub/nautobot-app-pdu-manager/develop/docs/images/power-job-result.png)
 
-## Try it out!
+The **Power Off Protection** rules that guard devices from being powered off or rebooted:
 
-> Developer Note: Only keep this section if appropriate. Update link to correct sandbox.
+![Power Off Protections list](https://raw.githubusercontent.com/jtdub/nautobot-app-pdu-manager/develop/docs/images/power-off-protections-list.png)
 
-This App is installed in the Nautobot Community Sandbox found over at [demo.nautobot.com](https://demo.nautobot.com/)!
-
-> For a full list of all the available always-on sandbox environments, head over to the main page on [networktocode.com](https://www.networktocode.com/nautobot/sandbox-environments/).
+More screenshots can be found in the [Using the App](https://docs.nautobot.com/projects/pdu-manager/en/latest/user/app_use_cases/) page in the documentation.
 
 ## Documentation
 

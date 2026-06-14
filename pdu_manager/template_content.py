@@ -1,32 +1,67 @@
 """Template extensions for pdu_manager.
 
-Adds a "PDU Power" button to every device detail page. The button links to a control view
-that works for both an APC PDU (per-outlet controls) and a device powered by a PDU outlet
-(controls for its feeding outlet). The view itself handles devices with no PDU relationship.
+Adds a built-in "PDU Power" dropdown (On / Off / Reboot / Status) to every ``dcim.device``
+detail page. Each item launches the matching per-action Job in a modal with the device
+pre-filled, so no Nautobot JobButton has to be configured by hand. This uses the declarative
+``object_detail_buttons`` UI-framework API (a native Bootstrap-5 dropdown with a Material
+Design power icon) rather than the legacy ``buttons()`` hook, which does not render on
+Nautobot 3.x's component-based device detail page. Pattern mirrors nautobot-app-tools.
 """
 
-from nautobot.apps.ui import Button, ButtonColorChoices, TemplateExtension
+from nautobot.apps.ui import ButtonColorChoices, DropdownButton, TemplateExtension
+from nautobot.core.ui.object_detail import _JobModalButton
+
+# Pre-fill each Job's `device` ObjectVar from the device whose page the button is on.
+_DEVICE_MAPPING = {"device": "id"}
 
 
 class DevicePowerControl(TemplateExtension):  # pylint: disable=abstract-method
-    """Add a PDU power-control button to the device detail page.
-
-    Only the declarative ``object_detail_buttons`` hook is needed; the other
-    TemplateExtension hooks keep their no-op base implementations.
-    """
+    """Add a built-in PDU power dropdown to the device detail page."""
 
     model = "dcim.device"
 
-    object_detail_buttons = (
-        Button(
-            weight=100,
+    object_detail_buttons = [
+        DropdownButton(
             label="PDU Power",
+            icon="mdi-power",
             color=ButtonColorChoices.BLUE,
-            icon="mdi-power-plug",
-            link_name="plugins:pdu_manager:device_power_control",
+            weight=100,
             required_permissions=["extras.run_job"],
+            children=[
+                _JobModalButton(
+                    label="Status",
+                    icon="mdi-information-outline",
+                    weight=100,
+                    class_path="pdu_manager.jobs.PowerStatusJob",
+                    initial_field_mapping=_DEVICE_MAPPING,
+                ),
+                _JobModalButton(
+                    label="On",
+                    icon="mdi-power-plug",
+                    color=ButtonColorChoices.GREEN,
+                    weight=200,
+                    class_path="pdu_manager.jobs.PowerOnJob",
+                    initial_field_mapping=_DEVICE_MAPPING,
+                ),
+                _JobModalButton(
+                    label="Off",
+                    icon="mdi-power-plug-off",
+                    color=ButtonColorChoices.RED,
+                    weight=300,
+                    class_path="pdu_manager.jobs.PowerOffJob",
+                    initial_field_mapping=_DEVICE_MAPPING,
+                ),
+                _JobModalButton(
+                    label="Reboot",
+                    icon="mdi-restart",
+                    color=ButtonColorChoices.YELLOW,
+                    weight=400,
+                    class_path="pdu_manager.jobs.PowerRebootJob",
+                    initial_field_mapping=_DEVICE_MAPPING,
+                ),
+            ],
         ),
-    )
+    ]
 
 
 template_extensions = [DevicePowerControl]
