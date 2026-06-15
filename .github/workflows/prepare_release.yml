@@ -1,5 +1,7 @@
 ---
 name: "Prepare Release"
+# Manually dispatched: bumps the version, assembles release notes with towncrier, and opens
+# the release PR (by default from `develop` into `main`).
 on: # yamllint disable-line rule:truthy rule:comments
   workflow_dispatch:
     inputs:
@@ -57,10 +59,11 @@ jobs:
             echo "PREVIOUS_TAG=$PREV_TAG" >> $GITHUB_ENV
             echo "Found previous tag: $PREV_TAG"
           else
-            # Fallback to the first commit in the repository
-            FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
-            echo "PREVIOUS_TAG=$FIRST_COMMIT" >> $GITHUB_ENV
-            echo "No tags found. Falling back to initial commit: $FIRST_COMMIT"
+            # No prior release tag (first release): leave PREVIOUS_TAG empty so the GitHub
+            # release-notes API is called without `previous_tag_name` (it rejects a non-tag,
+            # e.g. a commit hash, with HTTP 400).
+            echo "PREVIOUS_TAG=" >> $GITHUB_ENV
+            echo "No tags found; generating release notes from the start of history."
           fi
 
       - name: "Determine New Version"
@@ -109,11 +112,15 @@ jobs:
           # 1. Get Towncrier Draft
           TOWNCRIER_NOTES=$(poetry run towncrier build --version "${{ env.NEW_VERSION }}" --date "${{ env.RELEASE_DATE }}" --draft)
 
-          # 2. Call GitHub API to generate raw notes
-          RAW_GH_NOTES=$(gh api /repos/${{ github.repository }}/releases/generate-notes \
-            -f tag_name="v${{ env.NEW_VERSION }}" \
-            -f target_commitish="${{ github.event.inputs['target_branch'] == 'main' && 'develop' || github.event.inputs['target_branch'] }}" \
-            -f previous_tag_name="${{ env.PREVIOUS_TAG }}" --jq '.body')
+          # 2. Call GitHub API to generate raw notes (omit previous_tag_name on first release)
+          GH_NOTES_ARGS=(
+            -f tag_name="v${{ env.NEW_VERSION }}"
+            -f target_commitish="${{ github.event.inputs['target_branch'] == 'main' && 'develop' || github.event.inputs['target_branch'] }}"
+          )
+          if [ -n "${{ env.PREVIOUS_TAG }}" ]; then
+            GH_NOTES_ARGS+=(-f previous_tag_name="${{ env.PREVIOUS_TAG }}")
+          fi
+          RAW_GH_NOTES=$(gh api /repos/${{ github.repository }}/releases/generate-notes "${GH_NOTES_ARGS[@]}" --jq '.body')
 
           # 3. Parse usernames (Regex match)
           # We use grep to find "@user" patterns, sort, and uniq them
