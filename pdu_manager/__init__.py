@@ -5,7 +5,9 @@ from importlib import metadata
 
 from nautobot.apps import NautobotAppConfig
 
-__version__ = metadata.version(__name__)
+# The PyPI distribution name (`nautobot-pdu-manager`) differs from the import package
+# (`pdu_manager`), so look up the version by the distribution name explicitly.
+__version__ = metadata.version("nautobot-pdu-manager")
 
 
 class PduManagerConfig(NautobotAppConfig):

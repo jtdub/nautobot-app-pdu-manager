@@ -14,9 +14,9 @@ To avoid extra work and temporary links, make sure that publishing docs (or merg
   <img src="https://raw.githubusercontent.com/jtdub/nautobot-app-pdu-manager/develop/docs/images/icon-pdu-manager.png" class="logo" height="200px">
   <br>
   <a href="https://github.com/jtdub/nautobot-app-pdu-manager/actions"><img src="https://github.com/jtdub/nautobot-app-pdu-manager/actions/workflows/ci.yml/badge.svg?branch=main"></a>
-  <a href="https://docs.nautobot.com/projects/pdu-manager/en/latest/"><img src="https://readthedocs.org/projects/nautobot-app-pdu-manager/badge/"></a>
-  <a href="https://pypi.org/project/pdu-manager/"><img src="https://img.shields.io/pypi/v/pdu-manager"></a>
-  <a href="https://pypi.org/project/pdu-manager/"><img src="https://img.shields.io/pypi/dm/pdu-manager"></a>
+  <a href="https://nautobot-app-pdu-manager.readthedocs.io/en/latest/"><img src="https://readthedocs.org/projects/nautobot-app-pdu-manager/badge/"></a>
+  <a href="https://pypi.org/project/nautobot-pdu-manager/"><img src="https://img.shields.io/pypi/v/nautobot-pdu-manager"></a>
+  <a href="https://pypi.org/project/nautobot-pdu-manager/"><img src="https://img.shields.io/pypi/dm/nautobot-pdu-manager"></a>
   <br>
   An <a href="https://networktocode.com/nautobot-apps/">App</a> for <a href="https://nautobot.com/">Nautobot</a>.
 </p>
@@ -47,26 +47,26 @@ The **Power Off Protection** rules that guard devices from being powered off or 
 
 ![Power Off Protections list](https://raw.githubusercontent.com/jtdub/nautobot-app-pdu-manager/develop/docs/images/power-off-protections-list.png)
 
-More screenshots can be found in the [Using the App](https://docs.nautobot.com/projects/pdu-manager/en/latest/user/app_use_cases/) page in the documentation.
+More screenshots can be found in the [Using the App](https://nautobot-app-pdu-manager.readthedocs.io/en/latest/user/app_use_cases/) page in the documentation.
 
 ## Documentation
 
 Full documentation for this App can be found over on the [Nautobot Docs](https://docs.nautobot.com) website:
 
-- [User Guide](https://docs.nautobot.com/projects/pdu-manager/en/latest/user/app_overview/) - Overview, Using the App, Getting Started.
-- [Administrator Guide](https://docs.nautobot.com/projects/pdu-manager/en/latest/admin/install/) - How to Install, Configure, Upgrade, or Uninstall the App.
-- [Developer Guide](https://docs.nautobot.com/projects/pdu-manager/en/latest/dev/contributing/) - Extending the App, Code Reference, Contribution Guide.
-- [Release Notes / Changelog](https://docs.nautobot.com/projects/pdu-manager/en/latest/admin/release_notes/).
-- [Frequently Asked Questions](https://docs.nautobot.com/projects/pdu-manager/en/latest/user/faq/).
+- [User Guide](https://nautobot-app-pdu-manager.readthedocs.io/en/latest/user/app_overview/) - Overview, Using the App, Getting Started.
+- [Administrator Guide](https://nautobot-app-pdu-manager.readthedocs.io/en/latest/admin/install/) - How to Install, Configure, Upgrade, or Uninstall the App.
+- [Developer Guide](https://nautobot-app-pdu-manager.readthedocs.io/en/latest/dev/contributing/) - Extending the App, Code Reference, Contribution Guide.
+- [Release Notes / Changelog](https://nautobot-app-pdu-manager.readthedocs.io/en/latest/admin/release_notes/).
+- [Frequently Asked Questions](https://nautobot-app-pdu-manager.readthedocs.io/en/latest/user/faq/).
 
 ### Contributing to the Documentation
 
 You can find all the Markdown source for the App documentation under the [`docs`](https://github.com/jtdub/nautobot-app-pdu-manager/tree/develop/docs) folder in this repository. For simple edits, a Markdown capable editor is sufficient: clone the repository and edit away.
 
-If you need to view the fully-generated documentation site, you can build it with [MkDocs](https://www.mkdocs.org/). A container hosting the documentation can be started using the `invoke` commands (details in the [Development Environment Guide](https://docs.nautobot.com/projects/pdu-manager/en/latest/dev/dev_environment/#docker-development-environment)) on [http://localhost:8001](http://localhost:8001). Using this container, as your changes to the documentation are saved, they will be automatically rebuilt and any pages currently being viewed will be reloaded in your browser.
+If you need to view the fully-generated documentation site, you can build it with [MkDocs](https://www.mkdocs.org/). A container hosting the documentation can be started using the `invoke` commands (details in the [Development Environment Guide](https://nautobot-app-pdu-manager.readthedocs.io/en/latest/dev/dev_environment/#docker-development-environment)) on [http://localhost:8001](http://localhost:8001). Using this container, as your changes to the documentation are saved, they will be automatically rebuilt and any pages currently being viewed will be reloaded in your browser.
 
 Any PRs with fixes or improvements are very welcome!
 
 ## Questions
 
-For any questions or comments, please check the [FAQ](https://docs.nautobot.com/projects/pdu-manager/en/latest/user/faq/) first. Feel free to also swing by the [Network to Code Slack](https://networktocode.slack.com/) (channel `#nautobot`), sign up [here](http://slack.networktocode.com/) if you don't have an account.
+For any questions or comments, please check the [FAQ](https://nautobot-app-pdu-manager.readthedocs.io/en/latest/user/faq/) first. Feel free to also swing by the [Network to Code Slack](https://networktocode.slack.com/) (channel `#nautobot`), sign up [here](http://slack.networktocode.com/) if you don't have an account.
