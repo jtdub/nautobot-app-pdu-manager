@@ -2764,26 +2764,19 @@ sso = ["social-auth-core[saml] (>=4.8.7,<4.9)"]
 
 [[package]]
 name = "nautobot-plugin-nornir"
-version = "3.2.2a0"
+version = "3.2.1"
 description = "Nautobot App that provides a shim layer to simplify using Nornir within other Nautobot Apps and Nautobot Jobs"
 optional = false
-python-versions = ">=3.10,<3.15"
+python-versions = "<3.15,>=3.10"
 groups = ["main"]
-files = []
-develop = false
+files = [
+    {file = "nautobot_plugin_nornir-3.2.1-py3-none-any.whl", hash = "sha256:45446a4c9e38639e1cd6e19069594c2064a6eef05e22cbaf7e5858f73db80c60"},
+    {file = "nautobot_plugin_nornir-3.2.1.tar.gz", hash = "sha256:12017ce74e737085ad637b25ed755412883b5204c0243b854011edae1aec14f4"},
+]
 
 [package.dependencies]
 nautobot = ">=3.0.0,<4.0.0"
 nornir-nautobot = ">=4.2.0,<5.0.0"
-
-[package.extras]
-all = []
-
-[package.source]
-type = "git"
-url = "https://github.com/nautobot/nautobot-app-nornir.git"
-reference = "develop"
-resolved_reference = "165549017c8bd1f476fd632a3436462a87bfbdf0"
 
 [[package]]
 name = "ncclient"
@@ -5556,4 +5549,4 @@ all = []
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<3.14"
-content-hash = "3ea42dfb722b0d2602ca6fb3d673bddc7acb161b637987bba4e34d5b3367cfe3"
+content-hash = "a3b2d7da6c2eb402f9ba465e3ec6cce9191bdda9b168cadc91579c7237d37aac"

@@ -4,7 +4,7 @@ This document describes all new features and changes in the release `1.0`. The f
 
 <!-- towncrier release notes start -->
 
-## [v1.0.0a1 (2026-06-14)](https://github.com/jtdub/nautobot-app-pdu-manager/releases/tag/v1.0.0a1)
+## [v1.0.0a2 (2026-06-14)](https://github.com/jtdub/nautobot-app-pdu-manager/releases/tag/v1.0.0a2)
 
 ### Added
 
