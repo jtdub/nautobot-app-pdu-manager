@@ -34,19 +34,16 @@ python = ">=3.10,<3.14"
 # (`nautobot.core.ui.object_detail._JobModalButton`), which does not exist in 3.0.
 nautobot = ">=3.1.0,<4.0.0"
 # Nornir/Netmiko stack for SSH control of APC PDUs.
-# nautobot-app-nornir provides the Nautobot ORM inventory + Secrets-based credentials
-# and pulls in nornir-nautobot. nornir-netmiko provides the netmiko send-command tasks.
-#
-# NOTE: Nautobot 3.x support in nautobot-app-nornir is currently only on its `develop`
-# branch and is NOT yet published to PyPI (all released versions cap at Nautobot <3.0).
-# We therefore install it from git until a Nautobot 3.x-compatible release ships, at which
-# point this should be replaced with a normal version constraint (e.g. ">=3.2.0").
+# nautobot-plugin-nornir (repo: nautobot-app-nornir) provides the Nautobot ORM inventory +
+# Secrets-based credentials and pulls in nornir-nautobot. nornir-netmiko provides the
+# netmiko send-command tasks. The distribution name is `nautobot-plugin-nornir`; the import
+# is `nautobot_plugin_nornir`.
 netmiko = ">=4.0.0"
 nornir = ">=3.0.0"
 nornir-netmiko = ">=1.0.0"
-# Distribution name is `nautobot-plugin-nornir` (repo is nautobot-app-nornir); import is
-# `nautobot_plugin_nornir`. Poetry requires the key to match the distribution name.
-nautobot-plugin-nornir = { git = "https://github.com/nautobot/nautobot-app-nornir.git", branch = "develop" }
+# >=3.2.0 is the first published release line that supports Nautobot 3.x. A git/URL
+# dependency cannot be used here: PyPI rejects any package that declares one.
+nautobot-plugin-nornir = ">=3.2.0"
 
 [tool.poetry.group.dev.dependencies]
 coverage = "*"
