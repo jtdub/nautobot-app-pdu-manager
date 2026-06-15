@@ -1,5 +1,7 @@
 ---
 name: "Prepare Release"
+# Manually dispatched: bumps the version, assembles release notes with towncrier, and opens
+# the release PR (by default from `develop` into `main`).
 on: # yamllint disable-line rule:truthy rule:comments
   workflow_dispatch:
     inputs:

@@ -1,5 +1,7 @@
 ---
 name: "Release"
+# Runs when a GitHub Release is published with a `v*` tag: builds the package and publishes
+# it to the GitHub release and to PyPI (via Trusted Publishing).
 on: # yamllint disable-line rule:truthy rule:comments
   release:
     types: ["published"]
