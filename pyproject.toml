@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nautobot-pdu-manager"
-version = "1.0.0a0"
+version = "1.0.0a1"
 description = "Pdu Manager"
 authors = ["James Williams <james.williams@jtdub.com>"]
 license = "Apache-2.0"
