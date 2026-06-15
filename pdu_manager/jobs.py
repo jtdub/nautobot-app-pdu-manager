@@ -11,7 +11,12 @@ from nautobot.dcim.models import Device, PowerOutlet
 
 from pdu_manager.constants import ACTION_CHOICES, ACTION_OFF, ACTION_ON, ACTION_REBOOT, ACTION_STATUS
 from pdu_manager.nornir_plays import power_control
-from pdu_manager.utils import blocked_protected_devices, resolve_pdu_and_outlets
+from pdu_manager.utils import (
+    blocked_protected_devices,
+    record_outlet_action_result,
+    record_outlet_statuses,
+    resolve_pdu_and_outlets,
+)
 
 # `name` (lowercase) is the Nautobot-required module attribute for Job grouping.
 name = "PDU Manager"  # pylint: disable=invalid-name
@@ -58,6 +63,8 @@ class _BasePduJob(Job):  # pylint: disable=abstract-method
             pdu, outlet_ids = resolve_pdu_and_outlets(device, power_outlet)
             self.logger.info("Resolved %s action to PDU %s outlet(s) %s.", action, pdu.name, outlet_ids)
             power_control.run_power_action(self, pdu, action, outlet_ids)
+            # The action succeeded (run_power_action raises otherwise); reflect the new state.
+            record_outlet_action_result(pdu, outlet_ids, action)
             self.logger.info("'%s' completed on %s outlet(s) %s.", action, pdu.name, outlet_ids)
             return f"{action} completed on {pdu.name} outlet(s) {outlet_ids}."
         except (ValueError, power_control.PduCommandError) as error:
@@ -67,15 +74,21 @@ class _BasePduJob(Job):  # pylint: disable=abstract-method
         """Report outlet status scoped to the device acted on (not the whole PDU).
 
         A specific outlet (or a downstream device's feeding outlet) queries just that
-        outlet; the Status action on a PDU itself reports all of its outlets.
+        outlet; the Status action on a PDU itself reports all of its outlets. The parsed
+        statuses are persisted to the ``PduOutletStatus`` model so the device-page panel
+        reflects the latest poll.
         """
         if power_outlet is not None:
             pdu, outlet_ids = resolve_pdu_and_outlets(device, power_outlet)
-            return power_control.run_status(self, pdu, outlet_ids)
-        if device.power_outlets.exists():
-            return power_control.run_status(self, device)
-        pdu, outlet_ids = resolve_pdu_and_outlets(device)
-        return power_control.run_status(self, pdu, outlet_ids)
+            statuses = power_control.run_status(self, pdu, outlet_ids)
+        elif device.power_outlets.exists():
+            pdu = device
+            statuses = power_control.run_status(self, pdu)
+        else:
+            pdu, outlet_ids = resolve_pdu_and_outlets(device)
+            statuses = power_control.run_status(self, pdu, outlet_ids)
+        record_outlet_statuses(pdu, statuses)
+        return statuses
 
     def _fail(self, message):
         """Log ``message`` as a Job Failure entry, mark the job failed, and echo it back."""
@@ -111,16 +124,49 @@ class _SingleActionJob(_BasePduJob):
 
 
 class PowerStatusJob(_SingleActionJob):
-    """Read PDU outlet status for a device (scoped to its outlet, or all for a PDU)."""
+    """Read and store PDU outlet status.
+
+    With a ``device`` it reads status scoped to that device (the device-page button) and
+    updates the stored ``PduOutletStatus`` rows. Left blank — as for a scheduled run — it
+    polls **every** PDU and refreshes all of their stored outlet states.
+    """
 
     power_action = ACTION_STATUS
+
+    # Override the shared (required) device input: blank means "every PDU" for scheduled runs.
+    device = ObjectVar(
+        model=Device,
+        required=False,
+        description="A PDU, or a device powered by a PDU outlet. Leave blank to refresh every PDU.",
+    )
 
     class Meta:  # pylint: disable=too-few-public-methods
         """Job metadata."""
 
         name = "PDU Power: Status"
-        description = "Read APC PDU outlet status for the selected device."
+        description = "Read and store APC PDU outlet status (a device, or every PDU when left blank)."
         has_sensitive_variables = False
+
+    def run(self, device=None, power_outlet=None):  # pylint: disable=arguments-differ
+        """Refresh status for ``device`` (and optional ``power_outlet``), or every PDU."""
+        if device is not None:
+            return self._execute(device, self.power_action, power_outlet)
+        return self._sync_all_pdus()
+
+    def _sync_all_pdus(self):
+        """Poll and store outlet status for every PDU; per-PDU errors are logged, not fatal."""
+        pdus = Device.objects.filter(power_outlets__isnull=False).prefetch_related("power_outlets").distinct()
+        total = synced = 0
+        for pdu in pdus:
+            total += 1
+            try:
+                self._run_status(pdu, None)
+                synced += 1
+            except (ValueError, power_control.PduCommandError) as error:
+                self.logger.warning("Skipped PDU %s: %s", pdu.name, error)
+        message = f"Refreshed outlet status for {synced}/{total} PDU(s)."
+        self.logger.info(message)
+        return message
 
 
 class PowerOnJob(_SingleActionJob):

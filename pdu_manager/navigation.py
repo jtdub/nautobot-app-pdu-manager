@@ -25,6 +25,11 @@ items = (
             ),
         ),
     ),
+    NavMenuItem(
+        link="plugins:pdu_manager:pduoutletstatus_list",
+        name="PDU Outlet Status",
+        permissions=["pdu_manager.view_pduoutletstatus"],
+    ),
 )
 
 menu_items = (

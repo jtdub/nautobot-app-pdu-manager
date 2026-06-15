@@ -99,6 +99,78 @@ def command_set_for(pdu):
     return command_set
 
 
+def _upsert_outlet_statuses(pdu, state_for_index):
+    """Upsert PduOutletStatus rows for ``pdu``'s outlets, deriving each state from its index.
+
+    ``state_for_index(index)`` returns the state to store for the outlet, or None to leave
+    that outlet untouched. Outlets whose name has no trailing number (no index) are skipped.
+    The single choke point both :func:`record_outlet_statuses` and
+    :func:`record_outlet_action_result` share.
+
+    Returns:
+        The list of created/updated PduOutletStatus rows.
+    """
+    # Imported lazily so this module stays importable before the app registry is ready.
+    from django.utils import timezone  # pylint: disable=import-outside-toplevel
+
+    from pdu_manager.models import PduOutletStatus  # pylint: disable=import-outside-toplevel
+
+    now = timezone.now()
+    recorded = []
+    for outlet in pdu.power_outlets.all():
+        index = outlet_index(outlet)
+        if index is None:
+            continue
+        state = state_for_index(index)
+        if state is None:
+            continue
+        status, _ = PduOutletStatus.objects.update_or_create(
+            power_outlet=outlet,
+            defaults={"device": pdu, "outlet_index": index, "state": state, "last_polled": now},
+        )
+        recorded.append(status)
+    return recorded
+
+
+def record_outlet_statuses(pdu, statuses):
+    """Upsert :class:`~pdu_manager.models.PduOutletStatus` rows from a Status run.
+
+    ``statuses`` is the ``{outlet_index: {"name", "state"}}`` dict returned by
+    ``power_control.run_status``. For each of ``pdu``'s outlets whose index appears in
+    ``statuses``, the matching row is created or updated with the normalized state.
+
+    Returns:
+        The list of created/updated PduOutletStatus rows.
+    """
+    from pdu_manager.constants import STATE_OFF, STATE_ON, STATE_UNKNOWN  # pylint: disable=import-outside-toplevel
+
+    def state_for_index(index):
+        if index not in statuses:
+            return None
+        raw_state = (statuses[index].get("state") or "").strip().lower()
+        return {"on": STATE_ON, "off": STATE_OFF}.get(raw_state, STATE_UNKNOWN)
+
+    return _upsert_outlet_statuses(pdu, state_for_index)
+
+
+def record_outlet_action_result(pdu, outlet_ids, action):
+    """Update stored status for the outlets a power action just changed.
+
+    Called after a power action (on/off/reboot) reports success, so the device-page panel
+    reflects the change immediately without waiting for the next Status poll. The resulting
+    state is derived from the action via ``ACTION_TO_STATE``. Only the outlets named in
+    ``outlet_ids`` are touched.
+
+    Returns:
+        The list of created/updated PduOutletStatus rows.
+    """
+    from pdu_manager.constants import ACTION_TO_STATE, STATE_UNKNOWN  # pylint: disable=import-outside-toplevel
+
+    targets = set(outlet_ids or [])
+    state = ACTION_TO_STATE.get(action, STATE_UNKNOWN)
+    return _upsert_outlet_statuses(pdu, lambda index: state if index in targets else None)
+
+
 def downstream_devices_for_outlet(power_outlet):
     """Return the device(s) fed by ``power_outlet`` via its connected power port, if any.
 

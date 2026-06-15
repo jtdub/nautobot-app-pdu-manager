@@ -20,6 +20,27 @@ ACTION_CHOICES = (
 # These are refused when a device matches an enabled PowerOffProtection rule.
 PROTECTED_ACTIONS = (ACTION_OFF, ACTION_REBOOT)
 
+# Stored outlet states for the PduOutletStatus model. A Status run normalizes the parsed
+# CLI state ("On"/"Off") to STATE_ON/STATE_OFF; anything else (or a never-polled outlet) is
+# STATE_UNKNOWN. The device-page panel renders On green, Off red, and Unknown grey.
+STATE_ON = "On"
+STATE_OFF = "Off"
+STATE_UNKNOWN = "Unknown"
+
+STATE_CHOICES = (
+    (STATE_ON, "On"),
+    (STATE_OFF, "Off"),
+    (STATE_UNKNOWN, "Unknown"),
+)
+
+# The stored outlet state that results from a successful power action (a reboot ends
+# powered on). Used to update PduOutletStatus immediately after an action succeeds.
+ACTION_TO_STATE = {
+    ACTION_ON: STATE_ON,
+    ACTION_OFF: STATE_OFF,
+    ACTION_REBOOT: STATE_ON,
+}
+
 # Default PduCommandSet field values for APC Network Management Card (AOS) PDUs. Seeded by
 # the 0003_seed_apc_command_set data migration and assigned to the APC platform by the
 # generate_pdu_manager_test_data command. Editable per-platform via the PduCommandSet UI/API.

@@ -60,3 +60,28 @@ class PduCommandSetAPIViewTest(APIViewTestCases.APIViewTestCase):
             models.PduCommandSet.objects.create(
                 name=f"Seed {index}", on_command="on", off_command="off", status_command="stat"
             )
+
+
+class PduOutletStatusAPIViewTest(APIViewTestCases.APIViewTestCase):
+    # pylint: disable=too-many-ancestors
+    """Full CRUD API tests for PduOutletStatus."""
+
+    model = models.PduOutletStatus
+    choices_fields = ["state"]
+    update_data = {"state": "Off"}
+    bulk_update_data = {"state": "Off"}
+
+    @classmethod
+    def setUpTestData(cls):
+        """Seed three statuses and reserve three free outlets for the create tests."""
+        super().setUpTestData()
+        pdu, outlets = fixtures.create_pdu_with_outlets("api-status", 6)
+        for index in range(3):
+            models.PduOutletStatus.objects.create(
+                device=pdu, power_outlet=outlets[index], outlet_index=index + 1, state="On"
+            )
+        cls.create_data = [
+            {"device": pdu.pk, "power_outlet": outlets[3].pk, "outlet_index": 4, "state": "On"},
+            {"device": pdu.pk, "power_outlet": outlets[4].pk, "outlet_index": 5, "state": "Off"},
+            {"device": pdu.pk, "power_outlet": outlets[5].pk, "outlet_index": 6, "state": "Unknown"},
+        ]

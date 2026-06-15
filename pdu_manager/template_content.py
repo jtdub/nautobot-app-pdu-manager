@@ -8,8 +8,17 @@ Design power icon) rather than the legacy ``buttons()`` hook, which does not ren
 Nautobot 3.x's component-based device detail page. Pattern mirrors nautobot-app-tools.
 """
 
-from nautobot.apps.ui import ButtonColorChoices, DropdownButton, TemplateExtension
+from nautobot.apps.ui import (
+    ButtonColorChoices,
+    DropdownButton,
+    ObjectsTablePanel,
+    SectionChoices,
+    Tab,
+    TemplateExtension,
+)
 from nautobot.core.ui.object_detail import _JobModalButton
+
+from pdu_manager.tables import PduOutletStatusTable
 
 # Pre-fill each Job's `device` ObjectVar from the device whose page the button is on.
 _DEVICE_MAPPING = {"device": "id"}
@@ -58,6 +67,30 @@ class DevicePowerControl(TemplateExtension):  # pylint: disable=abstract-method
                     weight=400,
                     class_path="pdu_manager.jobs.PowerRebootJob",
                     initial_field_mapping=_DEVICE_MAPPING,
+                ),
+            ],
+        ),
+    ]
+
+    # Show the stored per-outlet status (On green / Off red) in a dedicated "PDU Status" tab
+    # on the device detail page. The table is empty for devices with no outlets; a Status run
+    # (the dropdown's "Status" item, which launches PowerStatusJob) populates it.
+    # ``table_filter="device"`` scopes the table to this device's PduOutletStatus rows.
+    object_detail_tabs = [
+        Tab(
+            weight=1000,
+            tab_id="pdu_outlet_status",
+            label="PDU Status",
+            panels=[
+                ObjectsTablePanel(
+                    weight=100,
+                    section=SectionChoices.FULL_WIDTH,
+                    label="PDU Outlet Status",
+                    table_class=PduOutletStatusTable,
+                    table_filter="device",
+                    select_related_fields=["device", "power_outlet"],
+                    add_button_route=None,
+                    exclude_columns=["pk", "device", "actions"],
                 ),
             ],
         ),

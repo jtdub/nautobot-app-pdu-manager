@@ -57,3 +57,35 @@ class PduCommandSetViewTest(ViewTestCases.PrimaryObjectViewTestCase):
             models.PduCommandSet.objects.create(
                 name=f"Existing {index}", on_command="on", off_command="off", status_command="stat"
             )
+
+
+class PduOutletStatusViewTest(ViewTestCases.PrimaryObjectViewTestCase):
+    # pylint: disable=too-many-ancestors
+    """Exercise the list/detail/add/edit/delete/bulk views for PduOutletStatus."""
+
+    model = models.PduOutletStatus
+    bulk_edit_data = {"state": "Off"}
+    # The detail view links to the PDU device, whose location breadcrumb is a tree model;
+    # that is one expected recursive query (the default budget of 0 is for FK-free models).
+    allowed_number_of_tree_queries_per_view_type = {"retrieve": 1}
+
+    @classmethod
+    def setUpTestData(cls):
+        """Seed three statuses and reserve a free outlet for the form-create test."""
+        pdu, outlets = fixtures.create_pdu_with_outlets("view-status", 4)
+        for index in range(3):
+            models.PduOutletStatus.objects.create(
+                device=pdu, power_outlet=outlets[index], outlet_index=index + 1, state="On"
+            )
+        cls.form_data = {
+            "device": pdu.pk,
+            "power_outlet": outlets[3].pk,
+            "outlet_index": 4,
+            "state": "Off",
+        }
+        cls.update_data = {
+            "device": pdu.pk,
+            "power_outlet": outlets[0].pk,
+            "outlet_index": 1,
+            "state": "Off",
+        }

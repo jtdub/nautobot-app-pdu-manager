@@ -45,6 +45,22 @@ class PduCommandSetUIViewSet(NautobotUIViewSet):
     serializer_class = serializers.PduCommandSetSerializer
 
 
+class PduOutletStatusUIViewSet(NautobotUIViewSet):
+    """UI CRUD (list/detail/delete/bulk) for stored PDU outlet statuses.
+
+    Rows are normally populated by a Status run rather than created by hand, but the list and
+    detail views make the stored state browsable and the rows deletable.
+    """
+
+    queryset = models.PduOutletStatus.objects.select_related("device", "power_outlet")
+    table_class = tables.PduOutletStatusTable
+    form_class = forms.PduOutletStatusForm
+    filterset_class = filters.PduOutletStatusFilterSet
+    filterset_form_class = forms.PduOutletStatusFilterForm
+    bulk_update_form_class = forms.PduOutletStatusBulkEditForm
+    serializer_class = serializers.PduOutletStatusSerializer
+
+
 def _outlet_rows(device):
     """Build the list of outlet rows shown on the control page for ``device``.
 
@@ -83,6 +99,26 @@ class DevicePowerControlView(PermissionRequiredMixin, View):
         return render(request, "pdu_manager/device_power_control.html", context)
 
 
+def _enqueue_power_action(request, device, action, power_outlet, target_label):
+    """Protection-check and enqueue PowerControlJob for ``device``/``action``/``power_outlet``.
+
+    Returns ``(job_result, None)`` on success, or ``(None, error_message)`` when a Power Off
+    Protection rule blocks the action. The single place both power-action views share.
+    """
+    protected = blocked_protected_devices(device, action, [power_outlet] if power_outlet else [])
+    if protected:
+        names = ", ".join(sorted(dev.name for dev in protected))
+        return None, f"Refusing to '{action}' {target_label}: blocked by a Power Off Protection rule matching {names}."
+
+    job_model = JobModel.objects.get(module_name="pdu_manager.jobs", job_class_name="PowerControlJob")
+    job_result = JobResult.enqueue_job(
+        job_model,
+        request.user,
+        **job_model.job_class.serialize_data({"device": device, "action": action, "power_outlet": power_outlet}),
+    )
+    return job_result, None
+
+
 class DevicePowerActionView(PermissionRequiredMixin, View):
     """Enqueue the PowerControlJob for a requested device/outlet/action and redirect."""
 
@@ -103,23 +139,38 @@ class DevicePowerActionView(PermissionRequiredMixin, View):
         if outlet_pk:
             power_outlet = get_object_or_404(PowerOutlet.objects.restrict(request.user, "view"), pk=outlet_pk)
 
-        protected = blocked_protected_devices(device, action, [power_outlet] if power_outlet else [])
-        if protected:
-            names = ", ".join(sorted(dev.name for dev in protected))
-            messages.error(
-                request,
-                f"Refusing to '{action}': blocked by a Power Off Protection rule matching {names}.",
-            )
+        job_result, error = _enqueue_power_action(request, device, action, power_outlet, device.name)
+        if error:
+            messages.error(request, error)
             return redirect("plugins:pdu_manager:device_power_control", pk=pk)
 
-        job_model = JobModel.objects.get(
-            module_name="pdu_manager.jobs",
-            job_class_name="PowerControlJob",
-        )
-        job_result = JobResult.enqueue_job(
-            job_model,
-            request.user,
-            **job_model.job_class.serialize_data({"device": device, "action": action, "power_outlet": power_outlet}),
-        )
         messages.info(request, f"Enqueued PDU '{action}' for {device}.")
+        return redirect("extras:jobresult", pk=job_result.pk)
+
+
+class OutletPowerActionView(PermissionRequiredMixin, View):
+    """Enqueue a power action for a single stored outlet (the status table's row buttons)."""
+
+    permission_required = "extras.run_job"
+
+    def get(self, request, pk, action):
+        """Validate the action, enforce protection, enqueue PowerControlJob, and redirect."""
+        status = get_object_or_404(
+            models.PduOutletStatus.objects.select_related("device", "power_outlet").restrict(request.user, "view"),
+            pk=pk,
+        )
+        device = status.device
+        power_outlet = status.power_outlet
+
+        valid_actions = {key for key, _ in ACTION_CHOICES}
+        if action not in valid_actions:
+            messages.error(request, f"Invalid power action: {action!r}.")
+            return redirect(device.get_absolute_url())
+
+        job_result, error = _enqueue_power_action(request, device, action, power_outlet, str(power_outlet))
+        if error:
+            messages.error(request, error)
+            return redirect(device.get_absolute_url())
+
+        messages.info(request, f"Enqueued PDU '{action}' for {power_outlet}.")
         return redirect("extras:jobresult", pk=job_result.pk)
