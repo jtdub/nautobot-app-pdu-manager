@@ -91,6 +91,36 @@ def create_pdu_environment():  # pylint: disable=too-many-locals
     }
 
 
+def create_pdu_with_outlets(prefix, outlet_count):
+    """Create a standalone PDU device with ``outlet_count`` outlets named "Outlet 1..N".
+
+    Each call builds its own manufacturer/type/location/role with a unique ``prefix`` so
+    multiple PDUs can coexist in one test. Returns ``(pdu, [outlets])``.
+    """
+    manufacturer = Manufacturer.objects.create(name=f"{prefix}-mfg")
+    device_type = DeviceType.objects.create(manufacturer=manufacturer, model=f"{prefix}-type")
+
+    device_ct = ContentType.objects.get_for_model(Device)
+    location_type = LocationType.objects.create(name=f"{prefix}-lt")
+    location_type.content_types.add(device_ct)
+    location_status = Status.objects.get_for_model(Location).first()
+    location = Location.objects.create(name=f"{prefix}-loc", location_type=location_type, status=location_status)
+
+    role = Role.objects.create(name=f"{prefix}-role")
+    role.content_types.add(device_ct)
+    device_status = Status.objects.get_for_model(Device).first()
+
+    pdu = Device.objects.create(
+        name=f"{prefix}-pdu",
+        device_type=device_type,
+        role=role,
+        location=location,
+        status=device_status,
+    )
+    outlets = [PowerOutlet.objects.create(device=pdu, name=f"Outlet {index}") for index in range(1, outlet_count + 1)]
+    return pdu, outlets
+
+
 def create_power_off_protection(  # pylint: disable=too-many-arguments
     name="Protect", *, enabled=True, roles=None, tenants=None, device_tags=None, devices=None
 ):

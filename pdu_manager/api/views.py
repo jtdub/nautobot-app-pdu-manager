@@ -20,3 +20,11 @@ class PduCommandSetViewSet(NautobotModelViewSet):  # pylint: disable=too-many-an
     queryset = models.PduCommandSet.objects.all()
     serializer_class = serializers.PduCommandSetSerializer
     filterset_class = filters.PduCommandSetFilterSet
+
+
+class PduOutletStatusViewSet(NautobotModelViewSet):  # pylint: disable=too-many-ancestors
+    """Full REST CRUD for stored PDU outlet statuses."""
+
+    queryset = models.PduOutletStatus.objects.all()
+    serializer_class = serializers.PduOutletStatusSerializer
+    filterset_class = filters.PduOutletStatusFilterSet
