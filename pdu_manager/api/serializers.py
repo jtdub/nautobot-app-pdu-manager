@@ -23,3 +23,13 @@ class PduCommandSetSerializer(NautobotModelSerializer, TaggedModelSerializerMixi
 
         model = models.PduCommandSet
         fields = "__all__"
+
+
+class PduOutletStatusSerializer(NautobotModelSerializer, TaggedModelSerializerMixin):  # pylint: disable=too-many-ancestors
+    """Serializer for the PduOutletStatus model."""
+
+    class Meta:
+        """Meta attributes."""
+
+        model = models.PduOutletStatus
+        fields = "__all__"

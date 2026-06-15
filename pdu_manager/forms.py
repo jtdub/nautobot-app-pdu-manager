@@ -8,6 +8,7 @@ from nautobot.apps.forms import (
     NautobotFilterForm,
     NautobotModelForm,
     StaticSelect2,
+    StaticSelect2Multiple,
     TagsBulkEditFormMixin,
 )
 from nautobot.dcim.models import Device, Platform
@@ -109,3 +110,44 @@ class PduCommandSetFilterForm(NautobotFilterForm):  # pylint: disable=too-many-a
     q = forms.CharField(required=False, label="Search")
     name = forms.CharField(required=False, label="Name")
     platforms = DynamicModelMultipleChoiceField(queryset=Platform.objects.all(), required=False)
+
+
+class PduOutletStatusForm(NautobotModelForm):  # pylint: disable=too-many-ancestors
+    """Create/edit form for a stored PDU outlet status (normally job-managed)."""
+
+    class Meta:
+        """Meta attributes."""
+
+        model = models.PduOutletStatus
+        fields = "__all__"
+
+
+class PduOutletStatusBulkEditForm(NautobotBulkEditForm):  # pylint: disable=too-many-ancestors
+    """Bulk-edit form for stored PDU outlet statuses (e.g. mark a selection On/Off)."""
+
+    pk = forms.ModelMultipleChoiceField(queryset=models.PduOutletStatus.objects.all(), widget=forms.MultipleHiddenInput)
+    state = forms.ChoiceField(
+        choices=[("", "---------"), *models.PduOutletStatus._meta.get_field("state").choices],
+        required=False,
+        widget=StaticSelect2,
+    )
+
+    class Meta:
+        """Meta attributes."""
+
+        nullable_fields = []
+
+
+class PduOutletStatusFilterForm(NautobotFilterForm):  # pylint: disable=too-many-ancestors
+    """Filter form for the PDU Outlet Status list view."""
+
+    model = models.PduOutletStatus
+    field_order = ["q", "device", "state"]
+
+    q = forms.CharField(required=False, label="Search")
+    device = DynamicModelMultipleChoiceField(queryset=Device.objects.all(), required=False)
+    state = forms.MultipleChoiceField(
+        choices=models.PduOutletStatus._meta.get_field("state").choices,
+        required=False,
+        widget=StaticSelect2Multiple,
+    )

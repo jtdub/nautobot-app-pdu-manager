@@ -11,6 +11,10 @@ Two persisted models:
   (the on/off/reboot/status verbs), success marker, and status-parsing regex. The jobs
   resolve a device's command set from its PDU's Platform instead of using hard-coded APC
   commands, so additional PDU vendors can be supported with no code changes.
+* :class:`PduOutletStatus` — the persisted, current on/off state of each PDU outlet. A
+  Status run (the device-page button or the device-less scheduled run) upserts one row per
+  outlet via :func:`pdu_manager.utils.record_outlet_statuses`; the device detail page shows
+  these rows in a green (On) / red (Off) panel.
 """
 
 import re
@@ -20,7 +24,7 @@ from django.db import models
 from nautobot.apps.constants import CHARFIELD_MAX_LENGTH
 from nautobot.apps.models import PrimaryModel, extras_features
 
-from pdu_manager.constants import ACTION_OFF, ACTION_ON, ACTION_REBOOT, ACTION_STATUS
+from pdu_manager.constants import ACTION_OFF, ACTION_ON, ACTION_REBOOT, ACTION_STATUS, STATE_CHOICES, STATE_UNKNOWN
 
 
 @extras_features("custom_links", "custom_validators", "export_templates", "graphql", "webhooks")
@@ -211,3 +215,52 @@ class PduCommandSet(PrimaryModel):  # pylint: disable=too-many-ancestors
                 "state": (groups.get("state") or "").capitalize(),
             }
         return statuses
+
+
+@extras_features("custom_links", "custom_validators", "export_templates", "graphql", "webhooks")
+class PduOutletStatus(PrimaryModel):  # pylint: disable=too-many-ancestors
+    """The last-polled on/off state of a single PDU outlet.
+
+    One row per outlet (keyed on ``power_outlet``): a Status run upserts the row with the
+    state parsed from the PDU's CLI output and the time it was polled. ``device`` (the PDU)
+    and ``outlet_index`` (the APC CLI outlet number) are denormalized from the outlet so the
+    device-page panel and the list view can filter/sort without re-deriving them.
+    """
+
+    device = models.ForeignKey(
+        to="dcim.Device",
+        on_delete=models.CASCADE,
+        related_name="pdu_outlet_statuses",
+        help_text="The PDU whose outlet this status belongs to.",
+    )
+    power_outlet = models.OneToOneField(
+        to="dcim.PowerOutlet",
+        on_delete=models.CASCADE,
+        related_name="pdu_outlet_status",
+        help_text="The PDU outlet this status describes.",
+    )
+    outlet_index = models.PositiveIntegerField(
+        help_text="The APC CLI outlet number parsed from the outlet name.",
+    )
+    state = models.CharField(
+        max_length=16,
+        choices=STATE_CHOICES,
+        default=STATE_UNKNOWN,
+        help_text="The last-polled outlet state (On / Off / Unknown).",
+    )
+    last_polled = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this outlet's state was last read from the PDU.",
+    )
+
+    class Meta:
+        """Meta class."""
+
+        ordering = ["device", "outlet_index"]
+        verbose_name = "PDU Outlet Status"
+        verbose_name_plural = "PDU Outlet Statuses"
+
+    def __str__(self):
+        """Stringify instance."""
+        return f"{self.power_outlet} = {self.state}"

@@ -4,6 +4,15 @@ This document describes all new features and changes in the release `1.0`. The f
 
 <!-- towncrier release notes start -->
 
+## [v1.0.0a4 (2026-06-14)](https://github.com/jtdub/nautobot-app-pdu-manager/releases/tag/v1.0.0a4)
+
+### Added
+
+- [#4](https://github.com/jtdub/nautobot-app-pdu-manager/issues/4) - Added a `PduOutletStatus` model that stores the last-polled on/off state of each PDU outlet, with full UI and REST API.
+- [#4](https://github.com/jtdub/nautobot-app-pdu-manager/issues/4) - Added a "PDU Status" tab to the device detail page that lists each outlet's stored state as a green (On) / red (Off) badge.
+- [#4](https://github.com/jtdub/nautobot-app-pdu-manager/issues/4) - Added per-row On/Off/Reboot buttons to the PDU outlet status view that enqueue the matching power action for that outlet (Power Off Protection still enforced).
+- [#4](https://github.com/jtdub/nautobot-app-pdu-manager/issues/4) - Extended the Status job to persist outlet state to `PduOutletStatus`, and to refresh every PDU when run without a device so it can be scheduled on an interval.
+
 ## [v1.0.0a2 (2026-06-14)](https://github.com/jtdub/nautobot-app-pdu-manager/releases/tag/v1.0.0a2)
 
 ### Added

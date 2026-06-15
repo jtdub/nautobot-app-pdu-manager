@@ -57,3 +57,20 @@ class PduCommandSetFilterSet(NautobotFilterSet):  # pylint: disable=too-many-anc
 
         model = models.PduCommandSet
         fields = "__all__"
+
+
+class PduOutletStatusFilterSet(NautobotFilterSet):  # pylint: disable=too-many-ancestors
+    """Filter for PduOutletStatus."""
+
+    q = SearchFilter(filter_predicates={"device__name": "icontains", "power_outlet__name": "icontains"})
+    device = NaturalKeyOrPKMultipleChoiceFilter(
+        queryset=Device.objects.all(),
+        to_field_name="name",
+        label="PDU device (name or ID)",
+    )
+
+    class Meta:
+        """Meta attributes for filter."""
+
+        model = models.PduOutletStatus
+        fields = "__all__"

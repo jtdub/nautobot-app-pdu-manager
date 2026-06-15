@@ -12,6 +12,7 @@ app_name = "pdu_manager"
 router = NautobotUIViewSetRouter()
 router.register("power-off-protections", views.PowerOffProtectionUIViewSet)
 router.register("pdu-command-sets", views.PduCommandSetUIViewSet)
+router.register("pdu-outlet-statuses", views.PduOutletStatusUIViewSet)
 
 urlpatterns = [
     path("docs/", RedirectView.as_view(url=static("pdu_manager/docs/index.html")), name="docs"),
@@ -24,6 +25,11 @@ urlpatterns = [
         "devices/<uuid:pk>/power/action/",
         views.DevicePowerActionView.as_view(),
         name="device_power_action",
+    ),
+    path(
+        "pdu-outlet-statuses/<uuid:pk>/power/<str:action>/",
+        views.OutletPowerActionView.as_view(),
+        name="pduoutletstatus_power",
     ),
 ]
 
