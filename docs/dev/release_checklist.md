@@ -87,7 +87,7 @@ Display the current version with no arguments:
 
 ```no-highlight
 > poetry version
-pdu-manager 1.0.0-beta.2
+nautobot-pdu-manager 1.0.0-beta.2
 ```
 
 Bump pre-release versions using `prerelease`:
