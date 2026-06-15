@@ -1,4 +1,0 @@
-Added a `PduOutletStatus` model that stores the last-polled on/off state of each PDU outlet, with full UI and REST API.
-Added a "PDU Status" tab to the device detail page that lists each outlet's stored state as a green (On) / red (Off) badge.
-Added per-row On/Off/Reboot buttons to the PDU outlet status view that enqueue the matching power action for that outlet (Power Off Protection still enforced).
-Extended the Status job to persist outlet state to `PduOutletStatus`, and to refresh every PDU when run without a device so it can be scheduled on an interval.
